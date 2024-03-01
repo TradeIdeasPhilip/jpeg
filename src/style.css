@@ -1,7 +1,6 @@
 :root {
   font-family: Helvetica, Arial, sans-serif;
-  }
-
+}
 
 body {
   margin: 0;
@@ -13,6 +12,12 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(8,3em);
-  grid-template-rows: repeat(8,3em);
+  grid-template-columns: repeat(8, 3em);
+  grid-template-rows: repeat(8, 3em);
+}
+
+.grid > div {
+  overflow: hidden;
+  padding: 5%;
+  text-overflow: ellipsis;
 }
