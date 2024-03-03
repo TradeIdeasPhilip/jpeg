@@ -1,13 +1,8 @@
 import { initializedArray } from "phil-lib/misc";
 import "./style.css";
 import { getById } from "phil-lib/client-misc";
-import { create, all, Matrix } from "mathjs";
-
-const math = create(all);
-
-function setRandomSeed(randomSeed: string | null) {
-  math.config({ randomSeed });
-}
+import * as math from "mathjs";
+import seedrandom from "seedrandom";
 
 const SIZE = 8;
 const AREA = SIZE * SIZE;
@@ -33,8 +28,8 @@ type TransformIndices = {
 };
 
 function createMatrix(getValue: (indices: TransformIndices) => number) {
-  const asArrays = initializedArray(SIZE, (resultIndex) =>
-    initializedArray(SIZE, (sourceIndex) =>
+  const asArrays = initializedArray(AREA, (resultIndex) =>
+    initializedArray(AREA, (sourceIndex) =>
       getValue({ resultIndex, sourceIndex })
     )
   );
@@ -55,7 +50,7 @@ type InitialTransform = {
    * The inverse matrix will be computed elsewhere.
    * This must exist.
    */
-  decode: Matrix;
+  decode: math.Matrix;
 };
 
 const mm = math.matrix([
@@ -65,30 +60,39 @@ const mm = math.matrix([
 mm;
 math.randomInt(2);
 
-const initialTransforms: InitialTransform[] = [
-  {
-    name: "Simple Average",
-    decode: math.transpose(
-      math.matrix(
-        initializedArray(AREA, (plaintextIndex) => {
-          if (plaintextIndex == 0) {
-            return initializedArray(AREA, () => 1 / AREA);
-          } else {
-            return initializedArray(AREA, (encodedIndex) =>
-              encodedIndex == plaintextIndex ? 1 : 0
-            );
-          }
-        })
-      )
-    ),
-  },
-  { name: "Identity", decode: math.identity([AREA, AREA]) as Matrix },
-  //{ name: "Squares", decode: math.matrix("dense") },
-  { name: "Random", decode: createMatrix((indicies) => Math.random()) },
-  { name: "Taylor ⨉ Taylor", decode: math.matrix("dense") },
-  { name: "Blur", decode: math.matrix("dense") },
-  { name: "Taylor ⨉ (Rows ∪ Columns)", decode: math.matrix("dense") },
-];
+const initialTransforms: InitialTransform[] = [];
+initialTransforms.push({
+  name: "Simple Average",
+  decode: math.transpose(
+    math.matrix(
+      initializedArray(AREA, (plaintextIndex) => {
+        if (plaintextIndex == 0) {
+          return initializedArray(AREA, () => 1);
+        } else {
+          return initializedArray(AREA, (encodedIndex) =>
+            encodedIndex == plaintextIndex ? 1 : 0
+          );
+        }
+      })
+    )
+  ),
+});
+
+initialTransforms.push({
+  name: "Identity",
+  decode: createMatrix(({ resultIndex, sourceIndex }) =>
+    resultIndex == sourceIndex ? 1 : 0
+  ),
+});
+{
+  const rng = seedrandom("גרסה ראשונה");
+  initialTransforms.push({ name: "Random", decode: createMatrix(() => rng()) });
+}
+//{ name: "Squares", decode: math.matrix("dense") },
+
+//{ name: "Taylor ⨉ Taylor", decode: math.matrix("dense") },
+//{ name: "Blur", decode: math.matrix("dense") },
+//{ name: "Taylor ⨉ (Rows ∪ Columns)", decode: math.matrix("dense") },
 
 function findGrid(id: string) {
   const top = getById(id, HTMLDivElement);
@@ -120,12 +124,52 @@ function findGrid(id: string) {
     })
   );
   const all = byRow.flat();
-  return { top, byRow, all };
+  function getVector() {
+    return math.matrix(all.map((cell) => cell.value));
+  }
+  function setVector(matrix: math.Matrix) {
+    all.forEach((cell, index) => {
+      cell.value = matrix.get([index]);
+    });
+  }
+  return {
+    top,
+    byRow,
+    all,
+    get vector() {
+      return getVector();
+    },
+    set vector(vector) {
+      setVector(vector);
+    },
+  };
 }
 
 const initialGrid = findGrid("initial");
-const encoded = findGrid("encoded");
+const encodedGrid = findGrid("encoded");
 const recreatedGrid = findGrid("recreated");
+
+(window as any).grids = { initialGrid, encodedGrid, recreatedGrid };
+
+const transformNameSelect = getById("transformName", HTMLSelectElement);
+
+initialTransforms.forEach((transform) => {
+  const option = document.createElement("option");
+  option.innerText = transform.name;
+  transformNameSelect.appendChild(option);
+});
+
+function updateCells() {
+  const decode = initialTransforms[transformNameSelect.selectedIndex].decode;
+  const encode = math.inv(decode);
+  const encoded = math.multiply(encode, initialGrid.vector);
+  encodedGrid.vector = encoded;
+  const recreated = math.multiply(decode, encoded);
+  recreatedGrid.vector = recreated;
+}
+
+updateCells();
+transformNameSelect.addEventListener("input", updateCells);
 
 /*
 inputGrid.all.forEach((cell) => {
