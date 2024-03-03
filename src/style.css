@@ -8,16 +8,26 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  flex-direction: column;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(8, 3em);
   grid-template-rows: repeat(8, 3em);
+  padding: 0.25em;
+  border: solid salmon 0.125em;
+  margin: 0.25em;
 }
 
 .grid > div {
   overflow: hidden;
   padding: 5%;
   text-overflow: ellipsis;
+  text-align: right;
+  cursor: nwse-resize;
+}
+
+.grid > div > div:first-child {
+  color: white;
 }
