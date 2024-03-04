@@ -1,4 +1,4 @@
-import { initializedArray } from "phil-lib/misc";
+import { initializedArray, makeBoundedLinear } from "phil-lib/misc";
 import "./style.css";
 import { getById } from "phil-lib/client-misc";
 import * as math from "mathjs";
@@ -53,29 +53,9 @@ type InitialTransform = {
   decode: math.Matrix;
 };
 
-const mm = math.matrix([
-  [1, 0],
-  [0, 1],
-]);
-mm;
-math.randomInt(2);
-
 const initialTransforms: InitialTransform[] = [];
 initialTransforms.push({
   name: "Simple Average",
-  // decode: math.transpose(
-  //   math.matrix(
-  //     initializedArray(AREA, (plaintextIndex) => {
-  //       if (plaintextIndex == 0) {
-  //         return initializedArray(AREA, () => 1);
-  //       } else {
-  //         return initializedArray(AREA, (encodedIndex) =>
-  //           encodedIndex == plaintextIndex ? 1 : 0
-  //         );
-  //       }
-  //     })
-  //   )
-  // ),
   decode: math.inv(
     createMatrix(({ resultIndex, sourceIndex }) => {
       if (resultIndex == 0) {
@@ -178,44 +158,75 @@ initialTransforms.forEach((transform) => {
   transformSelect.appendChild(option);
 });
 
-function updateCells() {
+function updateCells(which: "both" | "bottom") {
   const decode = initialTransforms[transformSelect.selectedIndex].decode;
-  const encode = math.inv(decode);
-  const encoded = math.multiply(encode, initialGrid.vector);
-  encodedGrid.vector = encoded;
-  const recreated = math.multiply(decode, encoded);
+  if (which == "both") {
+    const encode = math.inv(decode);
+    const encoded = math.multiply(encode, initialGrid.vector);
+    encodedGrid.vector = encoded;
+  }
+  const recreated = math.multiply(decode, encodedGrid.vector);
   recreatedGrid.vector = recreated;
 }
 
-{
-  initialGrid.all.forEach((cell) => {
-    const div = cell.div;
-    div.style.cursor = "nwse-resize";
-    let restoreTo = cell.value;
-    function update(event: PointerEvent) {
-      const x = event.offsetX / div.offsetWidth;
-      const y = event.offsetY / div.offsetHeight;
-      if (x < 0 || x > 1 || y < 0 || y > 1) {
-        cell.value = restoreTo;
-      } else {
-        const newValue = Math.min(1, Math.max(0, x + y - 0.5));
-        cell.value = newValue;
-        updateCells();
+initialGrid.all.forEach((cell) => {
+  const div = cell.div;
+  div.style.cursor = "crosshair";
+  let restoreTo = cell.value;
+  function update(event: PointerEvent) {
+    const x = event.offsetX / div.offsetWidth;
+    const y = event.offsetY / div.offsetHeight;
+    if (x < 0 || x > 1 || y < 0 || y > 1) {
+      cell.value = restoreTo;
+    } else {
+      const newValue = Math.min(1, Math.max(0, x + y - 0.5));
+      cell.value = newValue;
+      updateCells("both");
+    }
+  }
+  div.addEventListener("pointerdown", (event) => {
+    if (event.button == 0) {
+      restoreTo = cell.value;
+      update(event);
+      div.setPointerCapture(event.pointerId);
+    }
+  });
+  div.addEventListener("pointermove", (event) => {
+    if (div.hasPointerCapture(event.pointerId) && event.buttons & 1) {
+      update(event);
+    }
+  });
+});
+
+encodedGrid.all.forEach((cell, index) => {
+  const div = cell.div;
+  div.style.cursor = "pointer";
+  div.addEventListener("pointerdown", (event) => {
+    if (event.button == 0) {
+      const newValue = prompt(
+        `Index ${index}`,
+        numberFormatter.format(cell.value)
+      );
+      if (newValue !== null) {
+        cell.value = +newValue;
+        updateCells("bottom");
       }
     }
-    div.addEventListener("pointerdown", (event) => {
-      if (event.button == 0) {
-        restoreTo = cell.value;
-        update(event);
-        div.setPointerCapture(event.pointerId);
-      }
-    });
-    div.addEventListener("pointermove", (event) => {
-      if (div.hasPointerCapture(event.pointerId) && event.buttons & 1) {
-        update(event);
-      }
+  });
+});
+
+
+{
+  const radiusToValue = makeBoundedLinear(3,1,4,0);
+  const centerRow = 4;
+  const centerColumn = 3;
+  initialGrid.byRow.forEach((row, rowIndex)=>{
+    row.forEach((cell, columnIndex)=>{
+      const radius = Math.hypot(rowIndex-centerRow, columnIndex-centerColumn);
+      cell.value = radiusToValue(radius);
     });
   });
 }
-updateCells();
-transformSelect.addEventListener("input", updateCells);
+
+updateCells("both");
+transformSelect.addEventListener("input", () => updateCells("both"));
