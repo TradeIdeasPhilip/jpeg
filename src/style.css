@@ -21,11 +21,27 @@ body {
 }
 
 .grid > div {
-  overflow: hidden;
   padding: 5%;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.grid > div:hover {
+  z-index: 3;
+  outline: solid salmon;
+}
+
+.grid div {
+  overflow: hidden;
   text-overflow: ellipsis;
+  text-wrap: nowrap;
   text-align: right;
-  cursor: nwse-resize;
+}
+
+.grid > div > div {
+  font-size: 70%;
 }
 
 .grid > div > div:first-child {

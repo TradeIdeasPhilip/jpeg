@@ -63,18 +63,31 @@ math.randomInt(2);
 const initialTransforms: InitialTransform[] = [];
 initialTransforms.push({
   name: "Simple Average",
-  decode: math.transpose(
-    math.matrix(
-      initializedArray(AREA, (plaintextIndex) => {
-        if (plaintextIndex == 0) {
-          return initializedArray(AREA, () => 1);
+  // decode: math.transpose(
+  //   math.matrix(
+  //     initializedArray(AREA, (plaintextIndex) => {
+  //       if (plaintextIndex == 0) {
+  //         return initializedArray(AREA, () => 1);
+  //       } else {
+  //         return initializedArray(AREA, (encodedIndex) =>
+  //           encodedIndex == plaintextIndex ? 1 : 0
+  //         );
+  //       }
+  //     })
+  //   )
+  // ),
+  decode: math.inv(
+    createMatrix(({ resultIndex, sourceIndex }) => {
+      if (resultIndex == 0) {
+        return 1 / AREA;
+      } else {
+        if (sourceIndex == resultIndex) {
+          return 1 - 1 / AREA;
         } else {
-          return initializedArray(AREA, (encodedIndex) =>
-            encodedIndex == plaintextIndex ? 1 : 0
-          );
+          return -1 / AREA;
         }
-      })
-    )
+      }
+    })
   ),
 });
 
@@ -93,6 +106,10 @@ initialTransforms.push({
 //{ name: "Taylor ⨉ Taylor", decode: math.matrix("dense") },
 //{ name: "Blur", decode: math.matrix("dense") },
 //{ name: "Taylor ⨉ (Rows ∪ Columns)", decode: math.matrix("dense") },
+
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 3,
+});
 
 function findGrid(id: string) {
   const top = getById(id, HTMLDivElement);
@@ -114,7 +131,9 @@ function findGrid(id: string) {
         },
         set value(newValue) {
           value = newValue;
-          text.forEach((element) => (element.innerText = newValue.toString()));
+          text.forEach(
+            (element) => (element.innerText = numberFormatter.format(newValue))
+          );
           const asPercent = `${newValue * 100}%`;
           div.style.backgroundColor = `rgba(${asPercent},${asPercent},${asPercent})`;
         },
@@ -151,16 +170,16 @@ const recreatedGrid = findGrid("recreated");
 
 (window as any).grids = { initialGrid, encodedGrid, recreatedGrid };
 
-const transformNameSelect = getById("transformName", HTMLSelectElement);
+const transformSelect = getById("transformName", HTMLSelectElement);
 
 initialTransforms.forEach((transform) => {
   const option = document.createElement("option");
   option.innerText = transform.name;
-  transformNameSelect.appendChild(option);
+  transformSelect.appendChild(option);
 });
 
 function updateCells() {
-  const decode = initialTransforms[transformNameSelect.selectedIndex].decode;
+  const decode = initialTransforms[transformSelect.selectedIndex].decode;
   const encode = math.inv(decode);
   const encoded = math.multiply(encode, initialGrid.vector);
   encodedGrid.vector = encoded;
@@ -168,28 +187,35 @@ function updateCells() {
   recreatedGrid.vector = recreated;
 }
 
+{
+  initialGrid.all.forEach((cell) => {
+    const div = cell.div;
+    div.style.cursor = "nwse-resize";
+    let restoreTo = cell.value;
+    function update(event: PointerEvent) {
+      const x = event.offsetX / div.offsetWidth;
+      const y = event.offsetY / div.offsetHeight;
+      if (x < 0 || x > 1 || y < 0 || y > 1) {
+        cell.value = restoreTo;
+      } else {
+        const newValue = Math.min(1, Math.max(0, x + y - 0.5));
+        cell.value = newValue;
+        updateCells();
+      }
+    }
+    div.addEventListener("pointerdown", (event) => {
+      if (event.button == 0) {
+        restoreTo = cell.value;
+        update(event);
+        div.setPointerCapture(event.pointerId);
+      }
+    });
+    div.addEventListener("pointermove", (event) => {
+      if (div.hasPointerCapture(event.pointerId) && event.buttons & 1) {
+        update(event);
+      }
+    });
+  });
+}
 updateCells();
-transformNameSelect.addEventListener("input", updateCells);
-
-/*
-inputGrid.all.forEach((cell) => {
-  const period = 4500 + Math.random() * 1000;
-  cell.animate(
-    [
-      { offset: 0, backgroundColor: "rgba(0,0,0,0)" },
-      {
-        offset: Math.random() * 0.3,
-        backgroundColor: `rgba(0,0,0,${0.25 + Math.random() * 0.5})`,
-      },
-      { offset: 0.3, backgroundColor: "rgba(0,0,0,0)" },
-    ],
-    { duration: period, iterations: Infinity, delay: Math.random() * period }
-  );
-});
-let index = 0;
-inputGrid.all[index++].innerText = "0";
-inputGrid.all[index++].innerText = "0.00";
-inputGrid.all[index++].innerText = ".00";
-inputGrid.all[index++].innerText = ".987654";
-inputGrid.all[index++].innerHTML = "5<br>5";
-*/
+transformSelect.addEventListener("input", updateCells);
