@@ -3,6 +3,8 @@ import "./style.css";
 import { getById } from "phil-lib/client-misc";
 import * as math from "mathjs";
 import seedrandom from "seedrandom";
+import { initialPixels } from "./input-data";
+import { drawResult } from "./final-output";
 
 const SIZE = 8;
 const AREA = SIZE * SIZE;
@@ -215,14 +217,16 @@ encodedGrid.all.forEach((cell, index) => {
   });
 });
 
-
 {
-  const radiusToValue = makeBoundedLinear(3,1,4,0);
+  const radiusToValue = makeBoundedLinear(3, 1, 4, 0);
   const centerRow = 4;
   const centerColumn = 3;
-  initialGrid.byRow.forEach((row, rowIndex)=>{
-    row.forEach((cell, columnIndex)=>{
-      const radius = Math.hypot(rowIndex-centerRow, columnIndex-centerColumn);
+  initialGrid.byRow.forEach((row, rowIndex) => {
+    row.forEach((cell, columnIndex) => {
+      const radius = Math.hypot(
+        rowIndex - centerRow,
+        columnIndex - centerColumn
+      );
       cell.value = radiusToValue(radius);
     });
   });
@@ -230,3 +234,5 @@ encodedGrid.all.forEach((cell, index) => {
 
 updateCells("both");
 transformSelect.addEventListener("input", () => updateCells("both"));
+
+initialPixels.then((values) => drawResult(values));

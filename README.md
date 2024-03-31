@@ -25,15 +25,15 @@ The AI doesn't have to write code, just tune a matrix.
 
 ## For My Non-Technical Friends
 
-* JPEG is a format for saving images on a computer.
-* It is especially appropriate for photographs.
-* JPEG allows you to make smaller files if you are willing to accept a lower quality image.
-  * I.e. It gives you some choices when you save a file.
-* I am taking a lot of inspiration from JPEG, but I'm changing a few details, to see if I can make a _better_ image format. 
-* _Better_ means: 
-  * Making smaller files while retaining higher quality.
-  * Giving people better options when they save an image.
-  * Working well on more types of images.
+- JPEG is a format for saving images on a computer.
+- It is especially appropriate for photographs.
+- JPEG allows you to make smaller files if you are willing to accept a lower quality image.
+  - I.e. It gives you some choices when you save a file.
+- I am taking a lot of inspiration from JPEG, but I'm changing a few details, to see if I can make a _better_ image format.
+- _Better_ means:
+  - Making smaller files while retaining higher quality.
+  - Giving people better options when they save an image.
+  - Working well on more types of images.
 
 This cartoon shows one of the common problems in JPEG:
 
@@ -54,23 +54,23 @@ I don't want to leave any evidence that I touched the file at all.
 
 ## The Algorithm
 
-* Start with an uncompressed image as input.
-* Split the image into 3 separate color planes
-  * I will focus on a black and white image for now.
-* Split the color plane into 8x8 squares.
-  * There's nothing specials about that size or shape.
-  * I plan to touch on some alternatives.
-  * If the image size isn't an exact multiple of 8, throw away some data for now.
-* Apply a transformation to the each square.
-  * JPEG uses a discrete cosine transform.
-  * This is where I'm _seriously_ deviating from the JPEG algorithm.
-  * I'm trying a variety of linear transforms.
-* Quantize each result
-  * I.e. Decide ho much precision to use when saving the result.
-  * And where to use more precision and where it's safe to approximate more.
-* Entropy encode that result
-  * One last layer of compression.
-  * This is lossless compression.
+- Start with an uncompressed image as input.
+- Split the image into 3 separate color planes
+  - I will focus on a black and white image for now.
+- Split the color plane into 8x8 squares.
+  - There's nothing specials about that size or shape.
+  - I plan to touch on some alternatives.
+  - If the image size isn't an exact multiple of 8, throw away some data for now.
+- Apply a transformation to the each square.
+  - JPEG uses a discrete cosine transform.
+  - This is where I'm _seriously_ deviating from the JPEG algorithm.
+  - I'm trying a variety of linear transforms.
+- Quantize each result
+  - I.e. Decide ho much precision to use when saving the result.
+  - And where to use more precision and where it's safe to approximate more.
+- Entropy encode that result
+  - One last layer of compression.
+  - This is lossless compression.
 
 ## Recursion vs Grid
 
@@ -104,19 +104,19 @@ And I can tweak the process to limit the number of steps with _limited fidelity_
 This is a _simple_ recursive model.
 This would be a great place to start.
 
-* Start with a squarish image.
-* Take the average value of each pixel in the image.
-  * This will (probably) not be an integer.
-  * Send this value to the next layer.  (Quantizing and entropy encoding.)
-* Now consider the next layer of the tree.
-  * Subtract the average value (computed above) from the value of each pixel.
-  * Split the resulting image into four-ish equal-ish pieces.
-  * Recursively call this algorithm on the first three pieces.
-* Process the fourth piece in almost the same way.
-  * There is no need to _explicitly_ write the average value of this piece.
-  * The decoder can compute this value from the average of the other three pieces and the average of all pieces.
-  * But do the recursive part the same was as always.
-* Base case:  A piece has only one pixel and cannot be broken into smaller pieces.
+- Start with a squarish image.
+- Take the average value of each pixel in the image.
+  - This will (probably) not be an integer.
+  - Send this value to the next layer. (Quantizing and entropy encoding.)
+- Now consider the next layer of the tree.
+  - Subtract the average value (computed above) from the value of each pixel.
+  - Split the resulting image into four-ish equal-ish pieces.
+  - Recursively call this algorithm on the first three pieces.
+- Process the fourth piece in almost the same way.
+  - There is no need to _explicitly_ write the average value of this piece.
+  - The decoder can compute this value from the average of the other three pieces and the average of all pieces.
+  - But do the recursive part the same was as always.
+- Base case: A piece has only one pixel and cannot be broken into smaller pieces.
 
 I should reorder that output a little.
 I should send it out breath first, so I can do _progressive_ decoding.
@@ -129,7 +129,7 @@ Values closer to the bottom will hopefully require fewer bits, even before I sta
 
 ### Example: Nearby Pixels
 
-Another recursive approach would be to focus on the values of certain pixels, but jump around the image to spread these pixels out.  Start by recording the values of the 4 pixels on the edges of the image.  Then split the image into half.  If the image is taller than it is wide, cut it into top and bottom halves.  Otherwise cut it into left and right halves.  Either way you've added two new points, each between two existing points.
+Another recursive approach would be to focus on the values of certain pixels, but jump around the image to spread these pixels out. Start by recording the values of the 4 pixels on the edges of the image. Then split the image into half. If the image is taller than it is wide, cut it into top and bottom halves. Otherwise cut it into left and right halves. Either way you've added two new points, each between two existing points.
 
 In the simplest case you compare the new point to the _average_ of the other two points.
 However, having two inputs instead of one can help with the compression.
@@ -248,6 +248,7 @@ This is an important test case.
 **Case 5**:
 
 The histogram might include several different bell curves added together along with some random noise.
+(I.e. multi-modal.)
 This seems very common, as a photograph will have different areas. It will have dark areas, and light areas. None of these are a single color, but a set of similar colors.
 
 This is what I expect from most photographs.
@@ -324,6 +325,4 @@ The idea is straight from a linear algebra text book, but it's good to see it ac
 
 # Misc / Unsorted
 
-
-We do not want a matrix that could do everything.  It will have trouble doing anything well.  Think about the case of the JPEG where we could choose photo mode or text mode.  That's great when we want to choose which channels to clip.  But I'm hoping for cases where the computer can automatically notice that some data is very easy to predict in the entropy encoder.  The computer might pick or even create a good matrix for the data.
-
+We do not want a matrix that could do everything. It will have trouble doing anything well. Think about the case of the JPEG where we could choose photo mode or text mode. That's great when we want to choose which channels to clip. But I'm hoping for cases where the computer can automatically notice that some data is very easy to predict in the entropy encoder. The computer might pick or even create a good matrix for the data.
