@@ -37,15 +37,18 @@ The AI doesn't have to write code, just tune a matrix.
 
 This cartoon shows one of the common problems in JPEG:
 
-[![Example of PNG vs JPEG](https://www.labnol.org/images/2008/jpg_vs_png.png)](https://www.labnol.org/software/tutorials/jpeg-vs-png-image-quality-or-bandwidth/5385/)
+[![Example of PNG vs JPEG](./for_readme/jpg_vs_png.png)](https://www.labnol.org/software/tutorials/jpeg-vs-png-image-quality-or-bandwidth/5385/)
 
-On the right side the quality is low and the text is hard to read.
-(Make sure to put on your reading glasses!)
+On the right side of the cartoon the quality is low and the text is hard to read.
+Let me zoom in so you don't have to squint.
+
+!["PNG" is very clear but "JPEG" has a fuzzy halo around it.](./for_readme/PngVsJpegZoomed.png)
+
 This type of problem is called a _JPEG artifact_.
 
 I love the term _JPEG artifact_.
 _Artifact_ literally means something man made.
-If you're exploring ancient runes, you _want_ to to find artifacts.
+If you're exploring ancient runes, you _want_ to find artifacts.
 But I'm trying to reproduce an image as accurately as possible.
 In this context _artifact_ is a bad word.
 I want to create as few changes as possible in the pictures.
@@ -59,8 +62,7 @@ I don't want to leave any evidence that I touched the file at all.
   - I will focus on a black and white image for now.
 - Split the color plane into 8x8 squares.
   - There's nothing specials about that size or shape.
-  - I plan to touch on some alternatives.
-  - If the image size isn't an exact multiple of 8, throw away some data for now.
+  - I am currently investigating some alternatives.
 - Apply a transformation to the each square.
   - JPEG uses a discrete cosine transform.
   - This is where I'm _seriously_ deviating from the JPEG algorithm.
@@ -98,6 +100,10 @@ Each of the values in each group should have similar properties and should be co
 
 A recursive model will limit the maximum number of steps from the beginning of the process any pixel.
 And I can tweak the process to limit the number of steps with _limited fidelity_.
+
+The ideas behind these two examples both started as a linear transform on an 8⨉8 square of pixels.
+Then I expanded them out to do the same thing (recursively) on an arbitrarily large image.
+The recursive code is written much differently, but these operations are still linear transforms.
 
 ### Example: Big Pixels
 
