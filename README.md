@@ -1,9 +1,9 @@
 # JPEG without Discrete Cosine Transform
 
-I'm exploring some ideas about data compression.
+I’m exploring some ideas about data compression.
 
 The JPEG compression algorithm inspired this project.
-There's one step in particular I'd like to change in JPEG.
+There’s one step in particular I’d like to change in JPEG.
 _After_ splitting the colors into separate channels and _before_ quantizing the results, the algorithm _transforms_ the data.
 It breaks the data into squares of 64 pixels each, then uses a Discrete Cosine Transform on each of groups.
 The result is still a list a 64 numbers.
@@ -17,11 +17,11 @@ In some cases DCT can be very helpful.
 But is DCT relevant to the JPEG algorithm?
 It seems like a lot of other transforms will do the job, and some might work better than DCT.
 
-I'm focused on linear transforms.
+I’m focused on linear transforms.
 These are easy to specify and apply.
 And they are powerful.
-And, if I see promising results, this will be a perfect opportunity for the computer to tune things further on it's own.
-The AI doesn't have to write code, just tune a matrix.
+And, if I see promising results, this will be a perfect opportunity for the computer to tune things further on its own.
+The AI doesn’t have to write code, just tune a matrix.
 
 ## For My Non-Technical Friends
 
@@ -29,7 +29,7 @@ The AI doesn't have to write code, just tune a matrix.
 - It is especially appropriate for photographs.
 - JPEG allows you to make smaller files if you are willing to accept a lower quality image.
   - I.e. It gives you some choices when you save a file.
-- I am taking a lot of inspiration from JPEG, but I'm changing a few details, to see if I can make a _better_ image format.
+- I am taking a lot of inspiration from JPEG, but I’m changing a few details, to see if I can make a _better_ image format.
 - _Better_ means:
   - Making smaller files while retaining higher quality.
   - Giving people better options when they save an image.
@@ -40,20 +40,20 @@ This cartoon shows one of the common problems in JPEG:
 [![Example of PNG vs JPEG](./for_readme/jpg_vs_png.png)](https://www.labnol.org/software/tutorials/jpeg-vs-png-image-quality-or-bandwidth/5385/)
 
 On the right side of the cartoon the quality is low and the text is hard to read.
-Let me zoom in so you don't have to squint.
+Let me zoom in so you don’t have to squint.
 
-!["PNG" is very clear but "JPEG" has a fuzzy halo around it.](./for_readme/PngVsJpegZoomed.png)
+![“PNG” is very clear but “JPEG” has a fuzzy halo around it.](./for_readme/PngVsJpegZoomed.png)
 
-This type of problem is called a _JPEG artifact_.
+This type of problem is called a “_JPEG artifact_.”
 
-I love the term _JPEG artifact_.
-_Artifact_ literally means something man made.
-If you're exploring ancient runes, you _want_ to find artifacts.
-But I'm trying to reproduce an image as accurately as possible.
-In this context _artifact_ is a bad word.
+I love the term “_JPEG artifact_.”
+“_Artifact_” literally means something man made.
+If you’re exploring ancient runes, you _want_ to find _artifacts_.
+But I’m trying to reproduce an image as accurately as possible.
+In this context “_artifact_” is a bad word.
 I want to create as few changes as possible in the pictures.
 I want my _artifacts_ to be small and hard to find.
-I don't want to leave any evidence that I touched the file at all.
+I don’t want to leave any evidence that I touched the file at all.
 
 ## The Algorithm
 
@@ -61,15 +61,15 @@ I don't want to leave any evidence that I touched the file at all.
 - Split the image into 3 separate color planes
   - I will focus on a black and white image for now.
 - Split the color plane into 8x8 squares.
-  - There's nothing specials about that size or shape.
+  - There’s nothing specials about that size or shape.
   - I am currently investigating some alternatives.
 - Apply a transformation to the each square.
   - JPEG uses a discrete cosine transform.
-  - This is where I'm _seriously_ deviating from the JPEG algorithm.
-  - I'm trying a variety of linear transforms.
+  - This is where I’m _seriously_ deviating from the JPEG algorithm.
+  - I’m trying a variety of linear transforms.
 - Quantize each result
-  - I.e. Decide ho much precision to use when saving the result.
-  - And where to use more precision and where it's safe to approximate more.
+  - I.e. Decide how much precision to use when saving the result.
+  - And where to use more precision and where it’s safe to approximate more.
 - Entropy encode that result
   - One last layer of compression.
   - This is lossless compression.
@@ -87,7 +87,7 @@ The problem is that each cell is compressed and decompressed in a _lossy_ manner
 So each cell would accumulate the errors from previous cells.
 The fidelity of each cell will go down as the cells move to the bottom and the right.
 
-I'd like to get the benefit of more context, but I want to control the errors better.
+I’d like to get the benefit of more context, but I want to control the errors better.
 A recursive model would be perfect here.
 I can build a description of the image in a tree-like fashion.
 Numbers near the top of the tree will apply to a lot of pixels, so I want to allocate a lot of bits and get this part right.
@@ -114,8 +114,8 @@ This would be a great place to start.
 - Take the average value of each pixel in the image.
   - This will (probably) not be an integer.
   - Send this value to the next layer. (Quantizing and entropy encoding.)
+  - Subtract the average pixel value from the value of each individual pixel.
 - Now consider the next layer of the tree.
-  - Subtract the average value (computed above) from the value of each pixel.
   - Split the resulting image into four-ish equal-ish pieces.
   - Recursively call this algorithm on the first three pieces.
 - Process the fourth piece in almost the same way.
@@ -126,20 +126,20 @@ This would be a great place to start.
 
 I should reorder that output a little.
 I should send it out breath first, so I can do _progressive_ decoding.
-I.e. if you've only downloaded the first part of the image, you can still see a low resolution version of the image.
+I.e. if you’ve only downloaded the first part of the image, you can still see a low resolution version of the image.
 The instructions above are depth first because that was easier to describe in English.
 
-I will group the outputs by how many levels of recursion I've done.
+I will group the outputs by how many levels of recursion I’ve done.
 The number at the top will be between 0 and 255, but it still may need more than 8 bits to store enough detail.
 Values closer to the bottom will hopefully require fewer bits, even before I start to compromise the quality.
 
 ### Example: Nearby Pixels
 
-Another recursive approach would be to focus on the values of certain pixels, but jump around the image to spread these pixels out. Start by recording the values of the 4 pixels on the edges of the image. Then split the image into half. If the image is taller than it is wide, cut it into top and bottom halves. Otherwise cut it into left and right halves. Either way you've added two new points, each between two existing points.
+Another recursive approach would be to focus on the values of certain pixels, but jump around the image to spread these pixels out. Start by recording the values of the 4 pixels on the edges of the image. Then split the image into half. If the image is taller than it is wide, cut it into top and bottom halves. Otherwise cut it into left and right halves. Either way you’ve added two new points, each between two existing points.
 
 In the simplest case you compare the new point to the _average_ of the other two points.
 However, having two inputs instead of one can help with the compression.
-Based on [my previous experiences](https://github.com/TradeIdeasPhilip/compress) I suspect that the extra information will be useful to the entropy encoder, but I'd have to do more research on this data to see how to proceed.
+Based on [my previous experiences](https://github.com/TradeIdeasPhilip/compress) I suspect that the extra information will be useful to the entropy encoder, but I’d have to do more research on this data to see how to proceed.
 
 As in the previous example, I will group the data based on the number of levels of recursion.
 
@@ -148,10 +148,10 @@ As in the previous example, I will group the data based on the number of levels 
 I will need to get started with good input data.
 This is the same data I need for the 8⨉8 squares version.
 At a bare minimum I need one good image to examine.
-Ideally I'd have a lot of images, including some that would be ideal for JPEG but have never been JPEGed.
+Ideally I’d have a lot of images, including some that would be ideal for JPEG but have never been JPEGed.
 
 This algorithm will be easy to implement.
-There's no need for a prototype.
+There’s no need for a prototype.
 Just do it.
 
 This will provide me with a lot of good data.
@@ -164,14 +164,14 @@ This seems like a great place to start work immediately.
 This is simpler than my plan for the 8⨉8 version.
 And this will output more useful data.
 The 8⨉8 version will put all pixels into a single group.
-This version will create a series of groups, each with data that's been processed slightly differently.
+This version will create a series of groups, each with data that’s been processed slightly differently.
 
 ## TODO
 
 ### Better Input Data
 
 I need better input data.
-The way I'm currently doing it, one pixel at a time, is great for unit testing, but it's getting tedious.
+The way I’m currently doing it, one pixel at a time, is great for unit testing, but it’s getting tedious.
 I need to load and process real image files.
 And I need an optional preprocessing step to see how that affects things.
 
@@ -180,16 +180,16 @@ I will focus on the black and white data for now.
 ### Quantization
 
 I need to look at the quantization.
-Right now I'm storing each number in a `double`, so I lose very little to round off error.
+Right now I’m storing each number in a `double`, so I lose very little to round off error.
 The whole point of quantization is to use a lot fewer bits — to push our precision _beyond_ its limits — while minimizing the damage.
 
 I need to see how much damage quantization will do.
-That's the only way to see if this project makes sense at all.
-It's very possible that the transformed data will cost _more_ bits than the original data just to get decent quality.
-It's also very possible that I'll see good results from the start.
-I won't know until I add this step and look at the results.
+That’s the only way to see if this project makes sense at all.
+It’s very possible that the transformed data will cost _more_ bits than the original data just to get decent quality.
+It’s also very possible that I’ll see good results from the start.
+I won’t know until I add this step and look at the results.
 
-I need to make sure I'm not giving more bits to the quantizer than it needs.
+I need to make sure I’m not giving more bits to the quantizer than it needs.
 
 #### Starting Point
 
@@ -198,7 +198,7 @@ All pixels are treated the same and are all grouped together.
 
 **Assumption**:
 When I look at all of the pixel values in the entire image, I expect some values to be much more common than other values.
-I.e. if I pass the list of pixel values to an entropy encoder, I'd expect to see appreciable compression.
+I.e. if I pass the list of pixel values to an entropy encoder, I’d expect to see appreciable compression.
 One transform will be considered _better_ than another if the resulting values would compress better.
 
 I am designing and optimizing this algorithm for the case when this is true.
@@ -225,11 +225,11 @@ First I check if quantization is required.
 Maybe the compression settings say to use only 200 unique values, when this case actually needs only 171.
 
 Then I create a _simple_ dictionary telling the entropy encoder the probabilities of each value.
-In this case: "Values between 30 and 200 each appear approximately as often as each other and the remaining values never appear."
+In this case: “Values between 30 and 200 each appear approximately as often as each other and the remaining values never appear.”
 
 **Case 3**:
 When I plot a histogram of how how often each value appears, I get a bell curve.
-This is an idealized case of what I'm optimizing for.
+This is an idealized case of what I’m optimizing for.
 
 First consider the case where quantization is not required.
 The main program allows this step to save all 256 possible values.
@@ -260,7 +260,7 @@ This seems very common, as a photograph will have different areas. It will have 
 This is what I expect from most photographs.
 Some colors will be much more common than others.
 The common colors will clump in groups next to each other.
-I will have to make arbitrary cutoffs because these groups won't be perfect or have clean edges.
+I will have to make arbitrary cutoffs because these groups won’t be perfect or have clean edges.
 
 ### Measuring Error
 
@@ -268,7 +268,7 @@ I need an algorithm for objectively measuring the error of each compressed and d
 
 Eventually I will need more than one measure.
 As discussed above, we will have different needs at different times.
-For now I need something simple so I can start measuring the things I'm testing.
+For now I need something simple so I can start measuring the things I’m testing.
 
 A very simple measure would compare each pixel in the final image to the same pixel in the original image.
 Root - mean - square to get a total error.
@@ -283,7 +283,7 @@ It limits the drift, too, so it never gets that far off.
 
 - Compare _each_ pixel to _each_ of its 8 neighbors.
 
-  - Start by comparing each pixel in the final image to it's neighbor in the final image. (i.e. Compute the first derivative or the first difference.)
+  - Start by comparing each pixel in the final image to its neighbor in the final image. (i.e. Compute the first derivative or the first difference.)
   - Then do the same thing to the corresponding pixels in the original image.
   - Then, for each of the 8 directions, compare the values we computed in the previous two bullet points.
   - A lot of these differences will be negative, so square the values at this step.
@@ -308,9 +308,9 @@ Then this error function could give higher weights to the errors in the low freq
 This is the data that standard JPEG thinks is the most important.
 We could cover a lot with this framework, just using different transformation matrices and weights.
 
-I'm rethinking my initial algorithm.
+I’m rethinking my initial algorithm.
 
-- We don't need access to the nearby blocks.
+- We don’t need access to the nearby blocks.
 - We can get the same general results with just a single transformation matrix.
 - Each pixel in the transformed matrix is the sum of the pixel just to the right, the pixel one down, and the pixel one down and one right minus 3 times the pixel itself.
 - In the bottom right corner we just use the value itself.
@@ -327,8 +327,8 @@ I'm rethinking my initial algorithm.
 I have a nice framework for doing and reversing the transform step.
 And I have some low level tools for inspecting that step.
 
-The idea is straight from a linear algebra text book, but it's good to see it actually working.
+The idea is straight from a linear algebra text book, but it’s good to see it actually working.
 
 # Misc / Unsorted
 
-We do not want a matrix that could do everything. It will have trouble doing anything well. Think about the case of the JPEG where we could choose photo mode or text mode. That's great when we want to choose which channels to clip. But I'm hoping for cases where the computer can automatically notice that some data is very easy to predict in the entropy encoder. The computer might pick or even create a good matrix for the data.
+We do not want a matrix that could do everything. It will have trouble doing anything well. Think about the case of the JPEG where we could choose photo mode or text mode. That’s great when we want to choose which channels to clip. But I’m hoping for cases where the computer can automatically notice that some data is very easy to predict in the entropy encoder. The computer might pick or even create a good matrix for the data.
