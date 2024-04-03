@@ -109,7 +109,7 @@ The recursive code is written much differently, but these operations are still l
 
 This is a _simple_ recursive model.
 This is a great place to start.
-See `src/big-pixels.ts` for the implementation so far.
+See [./src/big-pixels.ts](./src/big-pixels.ts) for the implementation so far.
 
 - Start with a squarish image.
 - Take the average value of each pixel in the image.
@@ -195,7 +195,7 @@ I need to make sure I’m not giving more bits to the quantizer than it needs.
 #### Starting Point
 
 For simplicity, I could start with the identity transform.
-However, I already have real test data coming from `src/big-pixels.ts`, so I might as well focus on that.
+However, I already have real test data coming from [src/big-pixels.ts](src/big-pixels.ts), so I might as well focus on that.
 I’m using `analyze()` in that file to collect data.
 
 **Assumption**:
@@ -246,7 +246,7 @@ Hopefully the _same_ dictionary can describe the frequency of each value _and_ h
 
 **Case 4**:
 
-The histogram might include a few spikes spread out over over the values.
+The histogram might include a few spikes spread out over the values.
 This would be common if someone draws on top of an image with a solid color.
 E.g. text and arrows.
 
@@ -263,6 +263,51 @@ This is what I expect from most photographs.
 Some colors will be much more common than others.
 The common colors will clump in groups next to each other.
 I will have to make arbitrary cutoffs because these groups won’t be perfect or have clean edges.
+
+#### Quantization is Essential
+
+I originally thought quantization was an optional step, only required when I wanted to make the output even smaller.
+But after looking at the results from the [`big-pixels`](#example-big-pixels) transformation I learned a lot.
+
+Here are the results from my first attempt at [`big-pixels`](#example-big-pixels). Note that there are just as many numbers before and after the transformation.
+So, to a first approximation, each number should require 8 bits to break even.
+Saving bits on the bigger layers and using more bits on the smaller layers would always be an acceptable trade-off.
+
+When I looked at the bottom row, it included a lot of repeated values, and the most common values were close to each other.
+I.e. the data is perfect for entropy encoding.
+A quick approximation shows that I can get the bottom row down to about 5 bits per number, which is much better than the 8 bit benchmark.
+My results were much worse when I tried this on other layers near the bottom, sometimes over 10 bits per pixel.
+
+At the bottom level I see a lot of integers and halves.
+I probably want to get rid of those halves.
+Each one will contribute 0.5 to two different pixels.
+By itself that's literally round off error.
+Of course, it will get added to a lot of other numbers, each of which will get rounded off.
+Ideally I'd add everything first and round off at the end, but that's not how quantization works.
+
+That leads me to a related idea.
+If i'm on any layer but the bottom, I should know how quantization has hurt me so far.
+I should be able to adjust to that before I get to this layer.
+I.e. I should not be subtracting the average value of a group of pixels from each pixel.
+I should be quantizing the average value, so I know what the de-compressor will see, and I should be subtracting that value, not the ideal value, from each pixel.
+
+The top few layers might all be grouped together, but the rest of the layers will be done one at a time.
+I will know everything about one layer before I start the next layer.
+
+Back to the halves. Naively if I went from halves to integers I could strip one bit off each value.
+But I'm sending these values to an entropy encoder.
+I will be joining a lot of buckets together.
+And the buckets that already have the most in them are likely to be joined with other buckets that were also full.
+This is exactly the type of input that the entropy encoder loves.
+
+That was the easy case.
+What about the other layers near the bottom?
+These had a lot of numbers that weren't identical but were very close to each other.
+These will absolutely need some quantizing.
+Again, the digits at the end aren't very important.
+If I just rounded to the nearest integer I could probably do a good job, as with the bottom layer.
+This alone would get me down to the magic 8 bits per number, and presumably the next layer could get some good compression out of that.
+It will be easy to try various quantization schemes.
 
 ### Measuring Error
 
@@ -330,6 +375,9 @@ I have a nice framework for doing and reversing the transform step.
 And I have some low level tools for inspecting that step.
 
 The idea is straight from a linear algebra text book, but it’s good to see it actually working.
+
+I've been making more progress with the [`big-pixels`](#example-big-pixels) approach.
+This is giving me a lot of useful and promising [data](#quantization-is-essential).
 
 # Misc / Unsorted
 

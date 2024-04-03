@@ -199,22 +199,49 @@ export function transform(original: number[][]): Transformed {
 }
 
 export function restore(transformed: Transformed): number[][] {
+  transformed;
   return []; //TODO
 }
 
-function countDistinct(numbers: readonly number[]): number {
-  let count = 0;
-  let previous = NaN;
-  numbers.forEach((number) => {
-    if (number != previous) {
-      count++;
-      previous = number;
-    }
-  });
-  return count;
+function countDistinct(
+  numbers: readonly number[],
+  startFrom: number,
+  endBefore: number
+) {
+  const result = new Map<number, number>();
+  for (let index = startFrom; index < endBefore; index++) {
+    const number = numbers[index];
+    const previousCount = result.get(number) ?? 0;
+    result.set(number, previousCount + 1);
+  }
+  return result;
 }
 
-function analyze(numbers: number[]) {
+/**
+ * Compute the ideal cost of a single item sent to the entropy encoder.
+ * I've found these estimates to be very accurate using [rANS](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems#Range_variants_(rANS)_and_streaming)
+ * when the dictionary is complete.
+ * @param probability The probability of seeing the value we intend to encode.
+ * @returns The number of bits required to encode the symbol.
+ */
+function idealItemCost(probability: number) {
+  return -Math.log2(probability);
+}
+
+function idealListCost(counts: number[]) {
+  const denominator = sum(counts);
+  let result = 0;
+  counts.forEach(
+    (count) => (result += count * idealItemCost(count / denominator))
+  );
+  return result;
+}
+
+function costFromMap(items: Map<unknown, number>) {
+  return idealListCost([...items.values()]);
+}
+
+export function analyze(numbers: number[]) {
   numbers = numbers.map((number) => Math.round(number * 100000) / 100000);
   numbers.sort((a, b) => a - b);
   const inputCount = numbers.length;
@@ -226,9 +253,21 @@ function analyze(numbers: number[]) {
     const lowIndex = Math.floor(idealIndex);
     const highIndex = Math.ceil(idealIndex);
     const value = (numbers[lowIndex] + numbers[highIndex]) / 2;
-    return { breakNumber, value };
+    const optional: { distinct?: Map<number, number> } = {};
+    const nextBreak = breakNumber + 1;
+    if (nextBreak < breakCount) {
+      const lastIndex = Math.floor(getIdealIndex(nextBreak));
+      optional.distinct = countDistinct(numbers, highIndex, lastIndex + 1);
+    }
+    return { breakNumber, value, ...optional };
   });
-  const distinctCount = countDistinct(numbers);
-  return { inputCount, mean, distinctCount, nTiles };
+  const distinct = countDistinct(numbers, 0, numbers.length);
+  return {
+    inputCount,
+    mean,
+    totalBits: costFromMap(distinct),
+    distinct,
+    nTiles,
+  };
 }
 (window as any).analyze = analyze;

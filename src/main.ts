@@ -5,7 +5,7 @@ import * as math from "mathjs";
 import seedrandom from "seedrandom";
 import { initialPixels } from "./input-data";
 import { drawResult } from "./final-output";
-import { transform, restore } from "./big-pixels";
+import { transform, restore, analyze } from "./big-pixels";
 
 const SIZE = 8;
 const AREA = SIZE * SIZE;
@@ -238,6 +238,9 @@ transformSelect.addEventListener("input", () => updateCells("both"));
 
 initialPixels.then((values) => {
   drawResult(values);
-  console.log(transform(values));
+  const transformed = transform(values);
+  console.log(transformed, "transformed");
+  console.table(transformed.valuesByLevel.map((values) => analyze(values)));
+  (window as any).transformed = transformed;
   restore;
 });
