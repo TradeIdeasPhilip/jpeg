@@ -5,6 +5,7 @@ import * as math from "mathjs";
 import seedrandom from "seedrandom";
 import { initialPixels } from "./input-data";
 import { drawResult } from "./final-output";
+import { transform, restore } from "./big-pixels";
 
 const SIZE = 8;
 const AREA = SIZE * SIZE;
@@ -235,4 +236,8 @@ encodedGrid.all.forEach((cell, index) => {
 updateCells("both");
 transformSelect.addEventListener("input", () => updateCells("both"));
 
-initialPixels.then((values) => drawResult(values));
+initialPixels.then((values) => {
+  drawResult(values);
+  console.log(transform(values));
+  restore;
+});

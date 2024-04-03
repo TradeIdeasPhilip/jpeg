@@ -108,7 +108,8 @@ The recursive code is written much differently, but these operations are still l
 ### Example: Big Pixels
 
 This is a _simple_ recursive model.
-This would be a great place to start.
+This is a great place to start.
+See `src/big-pixels.ts` for the implementation so far.
 
 - Start with a squarish image.
 - Take the average value of each pixel in the image.
@@ -193,8 +194,9 @@ I need to make sure I’m not giving more bits to the quantizer than it needs.
 
 #### Starting Point
 
-For simplicity, start with the identity transform.
-All pixels are treated the same and are all grouped together.
+For simplicity, I could start with the identity transform.
+However, I already have real test data coming from `src/big-pixels.ts`, so I might as well focus on that.
+I’m using `analyze()` in that file to collect data.
 
 **Assumption**:
 When I look at all of the pixel values in the entire image, I expect some values to be much more common than other values.
