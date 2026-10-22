@@ -1,4 +1,4 @@
-import { initializedArray, makeBoundedLinear } from "phil-lib/misc";
+import { initializedArray, makeBoundedLinear, sum } from "phil-lib/misc";
 import "./style.css";
 import { getById } from "phil-lib/client-misc";
 import * as math from "mathjs";
@@ -240,7 +240,11 @@ initialPixels.then((values) => {
   drawResult(values);
   const transformed = transform(values);
   console.log(transformed, "transformed");
-  console.table(transformed.valuesByLevel.map((values) => analyze(values)));
+  const analysis = transformed.valuesByLevel.map((values) => analyze(values));
+  console.table(analysis);
+  const totalCostInBytes = Math.ceil( sum(analysis.map(level => level.totalBits))/8).toLocaleString();
+  console.log({totalCostInBytes});
   (window as any).transformed = transformed;
+  (window as any).analysis = analysis;
   restore;
 });

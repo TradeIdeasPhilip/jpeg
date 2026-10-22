@@ -198,6 +198,9 @@ For simplicity, I could start with the identity transform.
 However, I already have real test data coming from [src/big-pixels.ts](src/big-pixels.ts), so I might as well focus on that.
 I’m using `analyze()` in that file to collect data.
 
+I will also check the identity transform.
+If it gives results similar to the big-pixel transform, then I'm wasting my time with the transform.
+
 **Assumption**:
 When I look at all of the pixel values in the entire image, I expect some values to be much more common than other values.
 I.e. if I pass the list of pixel values to an entropy encoder, I’d expect to see appreciable compression.
@@ -286,15 +289,17 @@ Of course, it will get added to a lot of other numbers, each of which will get r
 Ideally I'd add everything first and round off at the end, but that's not how quantization works.
 
 That leads me to a related idea.
-If i'm on any layer but the bottom, I should know how quantization has hurt me so far.
+If I'm on any layer but the bottom, I should know how quantization has hurt me so far.
 I should be able to adjust to that before I get to this layer.
 I.e. I should not be subtracting the average value of a group of pixels from each pixel.
 I should be quantizing the average value, so I know what the de-compressor will see, and I should be subtracting that value, not the ideal value, from each pixel.
+(I call it Progressive Quantization™.)
 
 The top few layers might all be grouped together, but the rest of the layers will be done one at a time.
 I will know everything about one layer before I start the next layer.
 
-Back to the halves. Naively if I went from halves to integers I could strip one bit off each value.
+Back to the halves.
+Naively if I went from halves to integers I could strip one bit off each value.
 But I'm sending these values to an entropy encoder.
 I will be joining a lot of buckets together.
 And the buckets that already have the most in them are likely to be joined with other buckets that were also full.
@@ -382,3 +387,64 @@ This is giving me a lot of useful and promising [data](#quantization-is-essentia
 # Misc / Unsorted
 
 We do not want a matrix that could do everything. It will have trouble doing anything well. Think about the case of the JPEG where we could choose photo mode or text mode. That’s great when we want to choose which channels to clip. But I’m hoping for cases where the computer can automatically notice that some data is very easy to predict in the entropy encoder. The computer might pick or even create a good matrix for the data.
+
+
+
+change to depth first search, so we know the distance from the root, and group based on that.
+
+
+The last step should probably be precise to (quantized to) the integer.
+Any more would be unnecessary.
+Any less would throw away some data.
+If we have to throw away some data, the picture quality will degrade gracefully.
+And we have enough data to know what what parts we can throw away to affect the fewest pixels and what parts we should throw away to save the most data.
+Presumably it would not be hard to maximize that decision.
+
+How precise should the higher levels be?
+Since we are correcting for things on the lower levels, the upper levels don't have to do much.
+You could imagine setting everything to 0 except for the last row.  That would almost work.  
+The problem is that the last sibling's value is never recorded explicitly.  
+The program looks at the siblings' values and the average value and will assume the value must be negative!
+So there are limits to how bad the upstream values can be.
+But that's more about avoiding extreme values that being precise.
+So, what happens if the precision of the top levels goes down a little bit?
+Maybe I only keep the equivalent of 5 bits per number for the top layers.
+Presumably less precision up there means that the bottom layer will be less of a tight bell curve and will not compress quite as well.
+It might be a fair tradeoff.  Need to try some different values.
+I can't believe the top would really need more than 8 bits per number!
+But what's the sweet spot?
+Presumably the 
+
+can I really do this?
+If I throw away data at the top, I can never really recover it.
+Because I'm only storing 3 more values.  
+If I make all of those perfect, then all of the error from the higher level will go into the fourth number, possibly multiplied by 4ish.
+
+four pixels
+50% 50%
+50% 50%
+number on top should be 50% and the other three explicit numbers will be 0.
+what if the number on top got quantized to 49%
+If the lower level still had three 0's then all four final pixels would be at 49%
+If I did progressive quantizing I'd send three 1's so the first three pixels would correctly show 50%
+But the last pixel would be set to 46%
+So progressive quantizing is dead?
+It would be better to just work from the ideal value and get all four pixels off by the same amount than one way off.
+
+Note that throwing X amount of data away at a node will cause ALL of the pixels under that node to be off by that amount.
+So throwing data away (if necessary at all) is better at the lower levels, closer to the leaf nodes.
+But how much data do I need to keep at the top?
+Just 8 bits?
+Do additional bits help?
+If so, that might be a fair trade off.
+Add a few more bits to each of the (relatively few) numbers at the top and remove a few from the (relatively many) numbers at the bottom.
+I don't think it works that way.
+I think the bottom has to have 8 bits to do a good job and no amount of fiddling at the top will make a difference. 
+
+It seems like it would be easy to look at a transformed image and see exactly how different quantization schemes will effect the output.
+Both the damage to the quality and savings in compressed size.
+And this can we done on each level separately!
+So it should be easy to make sense of the results.
+
+and the top few levels shouldn't really be compressed or should all be compressed together.
+At that point maybe split up the things in a simpler way?

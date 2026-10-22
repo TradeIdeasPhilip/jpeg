@@ -1,19 +1,44 @@
 import { initializedArray, makeLinear, sum } from "phil-lib/misc";
 
+/**
+ * The transformation will end with the same number of values as before the transformation, but they will be organized much differently.
+ * The transformation explicitly includes the height and width of the initial image.
+ */
 export type Transformed = {
+  /**
+   * How tall was the initial image, in pixels.
+   */
   readonly height: number;
+  /**
+   * How wide was the initial image, in pixels.
+   */
   readonly width: number;
+  /**
+   * The first index is the level of the tree or the depth of the recursion.
+   * The rest of the data is stored in the order that it was generated.
+   */
   valuesByLevel: number[][];
 };
 
+/**
+ * This describes the part of an image that the program is currently examining.
+ */
 type Location = {
+  /**
+   * 0 for the root, i.e. the entire image.
+   * This is used mostly for grouping the results.
+   * The idea is that values computed at the same recursionDepth will have similar properties and will compress best if grouped together.
+   */
   readonly recursionDepth: number;
+  /**
+   * 0 for the top row.
+   */
   readonly topRow: number;
   readonly height: number;
   readonly leftColumn: number;
   readonly width: number;
 };
-type Callback = (siblings: ReadonlyArray<Location>) => void;
+
 
 function forEachPixel(
   location: Location,
@@ -58,6 +83,8 @@ class MaxRecursionDepth {
     }
   }
 }
+
+type Callback = (siblings: ReadonlyArray<Location>) => void;
 
 function breadthFirstSearchHelper( // need a fifo, no recursion ‼️
   siblings: readonly Location[],
@@ -242,7 +269,8 @@ function costFromMap(items: Map<unknown, number>) {
 }
 
 export function analyze(numbers: number[]) {
-  numbers = numbers.map((number) => Math.round(number * 100000) / 100000);
+  const roundTo = 1;
+  numbers = numbers.map((number) => Math.round(number * roundTo) / roundTo);
   numbers.sort((a, b) => a - b);
   const inputCount = numbers.length;
   const mean = sum(numbers) / inputCount;
@@ -262,10 +290,13 @@ export function analyze(numbers: number[]) {
     return { breakNumber, value, ...optional };
   });
   const distinct = countDistinct(numbers, 0, numbers.length);
+  const totalBits = costFromMap(distinct);
+  const bitsPerPixel = totalBits/inputCount;
   return {
     inputCount,
     mean,
-    totalBits: costFromMap(distinct),
+    totalBits,
+    bitsPerPixel,
     distinct,
     nTiles,
   };
